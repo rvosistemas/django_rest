@@ -1,8 +1,14 @@
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User, Group
-from django.contrib.auth import authenticate
+from django.contrib.auth.views import LogoutView
+
 from rest_framework import viewsets, permissions, generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
 from .serializers import UserSerializer, GroupSerializer, UserRegistrationSerializer
 
 
@@ -13,6 +19,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     queryset = User.objects.all().order_by("-date_joined")
     serializer_class = UserSerializer
+    authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
 
@@ -27,32 +34,38 @@ class GroupViewSet(viewsets.ModelViewSet):
 
 
 class UserLoginView(APIView):
+    """
+    API endpoint to login app.
+    """
+
     def post(self, request):
         username = request.data.get("username")
         password = request.data.get("password")
 
-        user = authenticate(username=username, password=password)
-        if user is None:
-            return Response({"error": "Invalid username or password"}, status=status.HTTP_401_UNAUTHORIZED)
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            refresh = RefreshToken.for_user(user)
+            response_data = {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Credenciales inválidas"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Si las credenciales son válidas, generar el token de acceso
-        # Aquí puedes utilizar la biblioteca que prefieras para generar el token (por ejemplo, JWT)
-        # En este ejemplo, se asume que ya tienes una función `generate_token` que recibe el usuario y devuelve el token
-        # token = generate_token(user)
 
-        # Devolver el token en la respuesta
-        # return Response({"token": token}, status=status.HTTP_200_OK)
-        return Response({"user": user}, status=status.HTTP_200_OK)
+class UserLogoutView(LogoutView):
+    """
+    API endpoint to logout app.
+    """
 
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
 
-# class UserLogoutView(LogoutView):
-#     authentication_classes = [TokenAuthentication]
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request, *args, **kwargs):
-#         # Invalidar el token de autenticación del usuario
-#         request.user.auth_token.delete()
-#         return Response(status=status.HTTP_200_OK)
+    def post(self, request, *args, **kwargs):
+        logout(request)
+        return Response({"success": "Cierre de sesión exitoso"}, status=status.HTTP_200_OK)
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -65,6 +78,17 @@ class UserRegistrationView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
 
 
+class UserDetailView(generics.RetrieveAPIView):
+    """
+    API endpoint to retrieve a user.
+    """
+
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+
 class UserUpdateView(generics.UpdateAPIView):
     """
     API endpoint to update a user.
@@ -73,6 +97,7 @@ class UserUpdateView(generics.UpdateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
 
 class UserDeleteView(generics.DestroyAPIView):
@@ -83,6 +108,7 @@ class UserDeleteView(generics.DestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
 
 class UserDeactivateView(generics.UpdateAPIView):
@@ -93,6 +119,7 @@ class UserDeactivateView(generics.UpdateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
