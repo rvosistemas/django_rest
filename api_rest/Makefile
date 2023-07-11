@@ -1,6 +1,6 @@
-test_coverage_api_rest:
+test_coverage_api_rest_postgres:
 	@echo "Running tests with coverage..."
-	@coverage run --source=api_rest manage.py test
+	@coverage run --source=rest_postgres manage.py test
 	@coverage report -m
 	@coverage html
 	@echo "Done."

@@ -12,6 +12,9 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from .serializers import UserSerializer, GroupSerializer, UserRegistrationSerializer
 
 
+# TODO: Implementar documentación con Swagger drf-yasg
+
+
 class UserViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
@@ -52,10 +55,10 @@ class UserLoginView(APIView):
             }
             return Response(response_data, status=status.HTTP_200_OK)
         else:
-            return Response({"error": "Credenciales inválidas"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-class UserLogoutView(LogoutView):
+class UserLogoutView(APIView):
     """
     API endpoint to logout app.
     """
@@ -63,9 +66,9 @@ class UserLogoutView(LogoutView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
+    def get(self, request, format=None):
         logout(request)
-        return Response({"success": "Cierre de sesión exitoso"}, status=status.HTTP_200_OK)
+        return Response({"success": "Logout successful"}, status=status.HTTP_200_OK)
 
 
 class UserRegistrationView(generics.CreateAPIView):
